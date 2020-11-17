@@ -57,7 +57,7 @@ ggplotly(b)
 Column {data-width=400}
 -------------------------------------
 
-### Total de candidatos
+### Total de candidatos em 2020
 
 ```{r}
 valueBox(427168, icon = "fa-smile")
@@ -71,10 +71,10 @@ a <- cand_junto %>%
   ggplot(aes(ANO_ELEICAO, n, color = DS_CARGO)) +
   geom_line() +
   geom_point() +
-  scale_fill_viridis_d() +
-  theme_minimal()+
-  labs(subtitle = "Total de candidatos", x= "Ano eleitoral", y = "contagem",
-       color = "Cargo")
+  labs(subtitle = "Total de candidatos", x= "Ano eleitoral", y = "",
+       color = "Cargo") +
+  theme(legend.position = "none") +
+  facet_grid(DS_CARGO~., scales = "free" )
 
 ggplotly(a)
 ```
@@ -88,32 +88,27 @@ Column
 -------------------------------------
 ### Grau de instrução dos candidates 2016 x 2020 - PREFEITO
 ```{r,warning=FALSE, message=FALSE}
-c <- cand_junto %>%
+cand_junto %>%
   filter(DS_CARGO == "PREFEITO") %>%
   ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_GRAU_INSTRUCAO))+
   geom_bar(position = "fill") +
   scale_fill_viridis_d() +
   theme_minimal() +
   labs(subtitle = "Grau de instrução dos candidates 2016 x 2020", x= "Ano eleitoral", y = "percentual", fill = "")
-  
 
-ggplotly(c)
 ```  
   
 Column 
 -------------------------------------
 ###  Grau de instrução dos candidates 2016 x 2020 - VEREADOR
 ```{r,warning=FALSE, message=FALSE}
-d <- cand_junto %>%
+cand_junto %>%
   filter(DS_CARGO == "VEREADOR") %>%
   ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_GRAU_INSTRUCAO))+
   geom_bar(position = "fill") +
   scale_fill_viridis_d()+
   theme_minimal() +
   labs(subtitle = "Grau de instrução dos candidates 2016 x 2020", x= "Ano eleitoral", y = "percentual", fill = "")
-  
-
-ggplotly(d)
 ```  
   
 
@@ -124,31 +119,23 @@ Column {data-width=400}
 -------------------------------------
 ### Idade candidates total por ano eleitoral
 ```{r, warning=FALSE, message=FALSE}
-cand_junto %>%
+f <- cand_junto %>%
   filter(NR_IDADE_DATA_POSSE > 0,
          NR_IDADE_DATA_POSSE < 100) %>%
   mutate(idade_categoria = case_when(NR_IDADE_DATA_POSSE < 30 ~ "Jovem",
                                      NR_IDADE_DATA_POSSE >= 60 ~ "Idoso",
                                      TRUE ~ "Adulto")) %>%
-  count(idade_categoria, ANO_ELEICAO) %>%
-  ggplot(aes(as.factor(ANO_ELEICAO), n, colour = idade_categoria, group = idade_categoria)) +
+  count(idade_categoria, ANO_ELEICAO, sort = TRUE) %>%
+  ggplot(aes(ANO_ELEICAO, n, color = idade_categoria)) +
   geom_line() +
   geom_point() +
-  scale_color_viridis_d() +
-  theme_minimal()+
   labs(subtitle = "Total de candidatos por ano eleitoral por faixa de idade",
-       x="ano", y= "", color = "Faixa de idade") -> f
+       x="ano", y= "", color = "") +
+  theme(legend.position = "none") +
+  facet_grid(idade_categoria~., scales = "free")
 
 ggplotly(f)
 ```
-
-####
-Queda no número total de candidatos Jovens, aumento de idosos e queda no número de candidatos adultos.
-
-As faixas de idade utilizadas são:
-- Jovens: Até 29 anos 
-- Adultos: 30 a 59 anos
-- Idosos:  60 ou mais
 
 
 Column {data-width=600}
@@ -168,10 +155,6 @@ cand_junto %>%
   labs(subtitle = "Proporção de grupo por ano eleitoral", x= "Ano", y = "percentagem", fill ="")
 
 ```
-
-####
-Apesar da queda total de candidatos, ao se analisar a alteração propocional ao total de candidatos por ano eleitoral, percebe-se que não há uma grande alteração no cenário dos candidatos.
-
 
 
 Ocupação  {.storyboard}
