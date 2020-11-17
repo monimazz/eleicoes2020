@@ -1,0 +1,466 @@
+---
+title: "Eleições 2020"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: flatly
+    social: [ "twitter", "facebook", "menu" ]
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(geobr)
+library(leaflet)
+library(viridis)
+library(plotly)
+
+#subindo as bases
+cand_junto <- read_rds("cand_juntoBR.rds")
+cand_cor <- read_rds("cand_cor.rds")
+
+#dados geo
+mun <- read_municipality(year = 2018)
+mun <- mun %>%
+  mutate(name_muni = str_to_upper(name_muni))
+
+```
+
+
+Dados gerais
+===================================== 
+
+Column {data-width=600}
+-------------------------------------
+### Principais sufixos do nome de urna
+```{r,warning=FALSE, message=FALSE}
+b <- cand_junto %>%
+  filter(DS_CARGO == "VEREADOR") %>%
+  filter(sufixo_urna != is.na(sufixo_urna),
+         sufixo_urna != "",
+         sufixo_urna != "SILVA", 
+         ANO_ELEICAO == 2020)%>%
+  count(sufixo_urna, sort = TRUE) %>%
+  filter(n > 300) %>%
+  mutate(sufixo_urna = fct_reorder(sufixo_urna, n)) %>%
+  ggplot(aes(sufixo_urna, n)) +
+  geom_col(fill = "#1A9430") +
+  coord_flip() +
+  theme_minimal() +
+  labs(subtitle = "Sufixo do nome de urna", x= "sufixos", y = "contagem")
+
+ggplotly(b)
+```
+
+
+
+Column {data-width=400}
+-------------------------------------
+
+### Total de candidatos
+
+```{r}
+valueBox(427168, icon = "fa-smile")
+```
+
+
+### Queda no número total de candidates de 2016 para 2020
+```{r,warning=FALSE, message=FALSE}
+a <- cand_junto %>% 
+  count(ANO_ELEICAO, DS_CARGO, sort = TRUE) %>%
+  ggplot(aes(ANO_ELEICAO, n, color = DS_CARGO)) +
+  geom_line() +
+  geom_point() +
+  scale_fill_viridis_d() +
+  theme_minimal()+
+  labs(subtitle = "Total de candidatos", x= "Ano eleitoral", y = "contagem",
+       color = "Cargo")
+
+ggplotly(a)
+```
+
+
+
+Escolaridade
+================================================================
+
+Column {data-width=400}
+-------------------------------------
+### Grau de instrução dos candidates 2016 x 2020 - PREFEITO
+```{r,warning=FALSE, message=FALSE}
+c <- cand_junto %>%
+  filter(DS_CARGO == "PREFEITO") %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_GRAU_INSTRUCAO))+
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(subtitle = "Grau de instrução dos candidates 2016 x 2020", x= "Ano eleitoral", y = "percentual", fill = "")
+  
+
+ggplotly(c)
+```  
+  
+Column {data-width=600}
+-------------------------------------
+###  Grau de instrução dos candidates 2016 x 2020 - VEREADOR
+```{r,warning=FALSE, message=FALSE}
+d <- cand_junto %>%
+  filter(DS_CARGO == "VEREADOR") %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_GRAU_INSTRUCAO))+
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d()+
+  theme_minimal() +
+  labs(subtitle = "Grau de instrução dos candidates 2016 x 2020", x= "Ano eleitoral", y = "percentual", fill = "")
+  
+
+ggplotly(d)
+```  
+  
+
+Idade 
+===================================== 
+
+Column {data-width=400}
+-------------------------------------
+### Idade candidates total por ano eleitoral
+```{r, warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(NR_IDADE_DATA_POSSE > 0,
+         NR_IDADE_DATA_POSSE < 100) %>%
+  mutate(idade_categoria = case_when(NR_IDADE_DATA_POSSE < 30 ~ "Jovem",
+                                     NR_IDADE_DATA_POSSE >= 60 ~ "Idoso",
+                                     TRUE ~ "Adulto")) %>%
+  count(idade_categoria, ANO_ELEICAO) %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), n, colour = idade_categoria, group = idade_categoria)) +
+  geom_line() +
+  geom_point() +
+  scale_color_viridis_d() +
+  theme_minimal()+
+  labs(subtitle = "Total de candidatos por ano eleitoral por faixa de idade",
+       x="ano", y= "", color = "Faixa de idade") -> f
+
+ggplotly(f)
+```
+
+####
+Queda no número total de candidatos Jovens, aumento de idosos e queda no número de candidatos adultos.
+
+As faixas de idade utilizadas são:
+- Jovens: Até 29 anos 
+- Adultos: 30 a 59 anos
+- Idosos:  60 ou mais
+
+
+Column {data-width=600}
+-------------------------------------
+### Idade candidates propocional ao total de candidates por ano
+```{r, warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(NR_IDADE_DATA_POSSE > 0,
+         NR_IDADE_DATA_POSSE < 100) %>%
+  mutate(idade_categoria = case_when(NR_IDADE_DATA_POSSE < 30 ~ "Jovem",
+                                     NR_IDADE_DATA_POSSE >= 60 ~ "Idoso",
+                                     TRUE ~ "Adulto")) %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), fill = idade_categoria)) +
+  geom_bar(position = "fill") +
+  theme_minimal() +
+  scale_fill_viridis_d() +
+  labs(subtitle = "Proporção de grupo por ano eleitoral", x= "Ano", y = "percentagem", fill ="")
+
+```
+
+####
+Apesar da queda total de candidatos, ao se analisar a alteração propocional ao total de candidatos por ano eleitoral, percebe-se que não há uma grande alteração no cenário dos candidatos.
+
+
+
+Ocupação  {.storyboard}
+===================================== 
+### Quais as principais ocupações dos candidates - VEREADOR
+```{r, warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(DS_CARGO == "VEREADOR",
+         DS_OCUPACAO != "OUTROS") %>%
+  count(DS_OCUPACAO, ANO_ELEICAO, sort = TRUE) %>%
+  top_n(10) %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), n, fill = as.factor(DS_OCUPACAO))) +
+  geom_bar(stat = "identity", position = "fill")+
+  scale_fill_viridis_d() +
+  theme_minimal()+
+  labs(subtitle = "Principais ocupações dos candidatos a vereador", x = "ano", y = "percentagem", fill = "Ocupação")
+```
+
+****
+Interessante notar que:
+- A ocupação "Vereador" não se repetiu em 2020 entre as 6 profissões mais comuns.  
+- Aumento da candidatura de empresários, comerciantes e agricultores
+
+### Quais as principais ocupações dos candidates - PREFEITURA
+```{r,warning=FALSE, message=FALSE}
+cand_junto %>%
+    filter(DS_CARGO == "PREFEITO",
+           DS_OCUPACAO != "OUTROS") %>%
+  count(DS_OCUPACAO, ANO_ELEICAO, sort = TRUE) %>%
+    top_n(10) %>%
+    ggplot(aes(as.factor(ANO_ELEICAO), n, fill = DS_OCUPACAO)) +
+    geom_bar(stat = "identity", position = "fill")+
+  scale_fill_viridis_d() +
+  theme_minimal()+
+  labs(subtitle = "Principais ocupações dos candidatos a prefeito", x = "ano", y = "percentagem", fill = "Ocupação")
+```
+
+****
+Interessante notar que:
+
+- A ocupação "Vereador" não se repetiu em 2020 entre as 6 profissões mais comuns.  
+- Aumento da candidatura de empresários, agricultores e advogados
+
+
+### Houve crescimento nos candidatos relacionados a ala militar - vereador
+```{r, warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(NM_POL == TRUE,
+         DS_CARGO == "VEREADOR") %>% 
+  count(ANO_ELEICAO,sort = TRUE) %>%
+  mutate(perc = n/sum(n)) %>%
+  ggplot(aes(ANO_ELEICAO, perc)) +
+  geom_point(color = "#8A33FF") +
+  geom_line(color = "#8A33FF") +
+  ylim(0,1) +
+  theme_minimal() +
+  labs(title = "Candidaturas de militares", x= "Ano eleitoral", y = "percentual")
+```
+
+****
+Houve um aumento de candidaturas a vereador que utilizam em seus nomes de urna os seguintes termos:
+
+- Bombeiro/Bombeira
+- Delegado/Delegada
+- Policial
+- Coronel
+- Major
+- Militar
+- Capitão/Capitã
+
+No total em 2016 eram 633 candidatos e em 2020 foram 731 para vereadores;
+Já a prefeito foram 42 em 2016 e em 2020 foram 112 candidatos possuindo ao menos um desses termos em seu nome de urna.
+
+Esta análise não foi feita utilizando a ocupação, por não corresponder em muitos dos casos com o nome de urna indicado pelo candidato.
+
+
+### Por quais partidos estão esses candidatos a vereador? (militares)
+```{r,warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(NM_POL == TRUE,
+         DS_CARGO == "VEREADOR") %>%
+  count(ANO_ELEICAO, SG_PARTIDO) %>%
+  mutate(SG_PARTIDO = fct_reorder(SG_PARTIDO, n)) %>%
+  ggplot(aes(SG_PARTIDO, n, fill = as_factor(ANO_ELEICAO))) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(subtitle = "Candidatos a vereador 'militares' por partido",
+       x = "", y = "Total de candidatos", fill = "") -> m
+
+ggplotly(m)
+```
+
+*****
+Interessante perceber o aumento da diversidade de partidos em 2020 com este perfil de candidatura, em especial dos partidos de centro.
+
+Em relação a candidatura de prefeitos, em 2020 os partidos com maior número de candidatos com este perfil foram:
+
+- PSL (11)
+- PATRIOTA (9)
+- PODE (9)
+- AVANTE (8)
+- PP (8)
+- PRTB (7)
+- PDT (5)
+- DEM (5)
+
+
+Mulheres na política  {.storyboard} 
+===================================== 
+
+
+### Quais municípios possuem mulheres candidatas a prefeita
+```{r,warning=FALSE, message=FALSE}
+mun_genero <- read_rds("mapa_pref_mulheres.rds")
+
+pal <- colorNumeric(
+  palette = "viridis",
+  domain = mun_genero$n,
+  na.color="transparent")
+
+mapagen = leaflet(mun_genero) %>% addTiles()
+mapagen %>% addPolygons(stroke = FALSE,
+                     smoothFactor = 0.2, fillOpacity = 1,
+                     color = ~pal(n),
+                     label = ~paste(mun_genero$name_muni, mun_genero$n),
+                     labelOptions = labelOptions(direction = "auto")) %>%
+  addLegend(pal = pal, values = ~mun_genero$n, opacity = 0.7, title = NULL,
+  position = "bottomright")
+```
+
+*****
+Somente 28% (1597) dos municípios brasileiros tinham mulheres candidatas ao executivo.
+
+### Candidates por gênero 2016 x 2020 - VEREADORES
+```{r,warning=FALSE, message=FALSE}
+cand_junto %>%
+filter(DS_CARGO == "VEREADOR") %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_GENERO))+
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(subtitle = "candidatos por genero proporcional ao ano eleitoral",
+       x = "Ano", y = "percentagem", fill = "")
+```
+
+****
+
+Pequeno aumento das candidaturas femininas propocionalmente.
+
+### Candidates por gênero 2016 x 2020 - PREFEITURA
+```{r,warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(DS_CARGO == "PREFEITO") %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_GENERO))+
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(subtitle = "candidatos por genero proporcional ao ano eleitoral",
+       x = "Ano", y = "percentagem", fill = "")
+```
+
+Indígenas {.storyboard}
+===================================== 
+### Candidaturas a prefeitura por indígenas
+
+```{r, warning=FALSE, message=FALSE}
+mun_indigena <- read_rds("mapa_pref_indigena.rds")
+
+
+mapain = leaflet(mun_indigena) %>% addTiles()
+
+pal <- colorNumeric(
+  palette = "viridis",
+  domain = mun_indigena$n)
+
+mapain %>% addPolygons(stroke = FALSE,
+                     smoothFactor = 0.2, fillOpacity = 1,
+                     color = ~pal(n),
+                     label = ~paste(mun_indigena$name_muni, mun_indigena$n),
+                     labelOptions = labelOptions(direction = "auto")) %>%
+  addLegend(pal = pal, values = ~mun_indigena$n, opacity = 0.7, title = NULL,
+  position = "bottomright")
+  
+```
+
+
+### Candidaturas a câmara dos vereadores por indígenas
+```{r, warning=FALSE, message=FALSE}
+
+mun_indigena_lesg <- read_rds("mapa_lesg_indigena.rds")
+
+mapainl = leaflet(mun_indigena_lesg) %>% addTiles()
+
+pal <- colorNumeric(
+  palette = "viridis",
+  domain = mun_indigena_lesg$n)
+
+mapainl %>% addPolygons(stroke = FALSE,
+                     smoothFactor = 0.2, fillOpacity = 1,
+                     color = ~pal(n),
+                     label = ~paste(mun_indigena_lesg$name_muni, mun_indigena_lesg$n),
+                     labelOptions = labelOptions(direction = "auto")) %>%
+  addLegend(pal = pal, values = ~mun_indigena_lesg$n, opacity = 0.7, title = NULL,
+  position = "bottomright")
+```
+
+
+
+Negros {.storyboard}
+===================================== 
+
+### Quais municípios possuem candidatos ao executivo negros
+
+```{r,warning=FALSE, message=FALSE}
+mun_negros <- read_rds("mapa_pref_negros.rds")
+
+mapan = leaflet(mun_negros) %>% addTiles()
+
+pal <- colorNumeric(
+  palette = "viridis",
+  domain = mun_negros$n)
+
+mapan %>% addPolygons(stroke = FALSE,
+                     smoothFactor = 0.2, fillOpacity = 1,
+                     color = ~pal(n),
+                     label = ~paste(mun_negros$name_muni, mun_negros$n),
+                     labelOptions = labelOptions(direction = "auto")) %>%
+  addLegend(pal = pal, values = ~mun_negros$n, opacity = 0.7, title = NULL,
+  position = "bottomright")
+```
+
+****
+Percebe-se que no Sul e Sudeste há poucas candidaturas negras ao executivo,
+aqui colocadas como "parda" e "preta".
+
+### Mudança de 2016 para 2020 de identificação de cor
+
+```{r,warning=FALSE, message=FALSE}
+library(flipPlots)
+sankey <- cand_cor %>%
+  count(DS_COR_RACA.y,DS_COR_RACA.x, sort = TRUE) %>%
+  mutate(perc = n/sum(n)*100)
+
+SankeyDiagram(sankey[,-3:-4],
+              link.color = "Source",
+              label.show.varname = FALSE,
+              weights = sankey$n)
+
+```
+
+*****
+Foi perceptível uma grande mudança de 2016 (esquerda) para 2020 (direita) de declaração de cor dos candidatos a vereador, em especial de brancos para pardos.
+
+
+
+### Candidatos por cor 2016 x 2020 - VEREADORES
+````{r,warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(DS_CARGO == "VEREADOR",
+         DS_COR_RACA != "AMARELA",
+         DS_COR_RACA != "INDÍGENA",
+         DS_COR_RACA != "NÃO DIVULGÁVEL") %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_COR_RACA))+
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(x = "Ano eleitoral", y = "percentagem", fill = "")
+````
+
+
+****
+Aumento das candidaturas pardas e pretas (proporcional ao total de candidatos de cada ano eleitoral). 
+
+vale ressaltar que foi retirado do gráfico os grupos: "AMARELOS" , "INDÍGENAS" e "NÃO INFORMADOS", pois devido sua pouca quantidade não apareciam no gráfico.
+
+
+### Candidatos por cor 2016 x 2020 - PREFEITURA
+````{r,warning=FALSE, message=FALSE}
+cand_junto %>%
+  filter(DS_CARGO == "PREFEITO",
+         DS_COR_RACA != "AMARELA",
+         DS_COR_RACA != "INDÍGENA",
+         DS_COR_RACA != "NÃO DIVULGÁVEL") %>%
+  ggplot(aes(as.factor(ANO_ELEICAO), fill = DS_COR_RACA))+
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(x = "Ano eleitoral", y = "percentagem", fill = "")
+````
+  
