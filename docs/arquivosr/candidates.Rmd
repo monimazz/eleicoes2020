@@ -84,7 +84,7 @@ ggplotly(a)
 Escolaridade
 ================================================================
 
-Column {data-width=400}
+Column
 -------------------------------------
 ### Grau de instrução dos candidates 2016 x 2020 - PREFEITO
 ```{r,warning=FALSE, message=FALSE}
@@ -100,7 +100,7 @@ c <- cand_junto %>%
 ggplotly(c)
 ```  
   
-Column {data-width=600}
+Column 
 -------------------------------------
 ###  Grau de instrução dos candidates 2016 x 2020 - VEREADOR
 ```{r,warning=FALSE, message=FALSE}
